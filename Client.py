@@ -15,12 +15,13 @@ def run():
 
     print("Client started, listening for offer requests...")
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('', offers_port))
+    udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_sock.bind(('', offers_port))
 
     def connect(dest_ip, dest_port):
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
+            print((dest_ip, dest_port))
             tcp_sock.connect((dest_ip, dest_port))
         except Exception as e:
             print("connection failed", e)
@@ -28,7 +29,7 @@ def run():
             tcp_sock.close()
 
     def listen():
-        message, addr = sock.recvfrom(buffer_size)
+        message, addr = udp_sock.recvfrom(buffer_size)
         recv_magic_cookie = message[0:4]
         for i in range(4):
             if magic_cookie[i] != recv_magic_cookie[i]:
@@ -40,8 +41,7 @@ def run():
             return
         server_port = struct.unpack('<H', message[5:7])[0]
         server_ip = addr
-        print("ip", server_ip,"port", server_port)
-        connect(server_ip, server_port)
+        connect(server_ip[0], server_port)
 
     while 1:
         listen()

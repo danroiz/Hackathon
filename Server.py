@@ -26,13 +26,16 @@ def run():
     udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print("my welcome port:", tcp_welcome_port)
     tcp_sock.bind((hostname, tcp_welcome_port))
     tcp_sock.listen(10)
 
     sending_offer = True
     while sending_offer:
         udp_sock.sendto(msg, ("255.255.255.255", offers_port))  # TODO:change to dynamic interface
+        tcp_sock.accept()
         sleep(1)
+
 
 
 
