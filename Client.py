@@ -16,8 +16,6 @@ def run():
 
     print("Client started, listening for offer requests...")
 
-
-
     def connect(dest_ip, dest_port):
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -26,8 +24,11 @@ def run():
             tcp_sock.send(team_name)
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
-            ans = sys.stdin.read(1) #TODO: not blocking?
-            tcp_sock.send(bytearray(ans.encode()))
+            ans = sys.stdin.read(1)  # TODO: not blocking?
+            try:
+                tcp_sock.send(bytearray(ans.encode()))
+            except Exception:
+                cake = "is a lie"
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
 

@@ -25,7 +25,10 @@ def run():
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
             ans = sys.stdin.read(1)  # TODO: not blocking?
-            tcp_sock.send(bytearray(ans.encode()))
+            try:
+                tcp_sock.send(bytearray(ans.encode()))
+            except Exception:
+                cake = "is a lie"
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
 
