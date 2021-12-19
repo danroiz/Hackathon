@@ -8,15 +8,13 @@ def run():
     endian = '>H'
     if sys.byteorder == "little":
         endian = '<H'
-    team_name = b'The Bitles\n'
+    team_name = b'Dirty Bits\n'
     offers_port = 13117
     buffer_size = 1024
     magic_cookie = bytearray.fromhex("abcddcba")
     offer_type = bytearray.fromhex("02")
 
     print("Client started, listening for offer requests...")
-
-
 
     def connect(dest_ip, dest_port):
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,7 +24,7 @@ def run():
             tcp_sock.send(team_name)
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
-            ans = sys.stdin.read(1) #TODO: not blocking?
+            ans = sys.stdin.read(1)  # TODO: not blocking?
             tcp_sock.send(bytearray(ans.encode()))
             msg = tcp_sock.recv(1024)
             print(msg.decode("utf-8"))
