@@ -21,8 +21,8 @@ def run():
     def connect(dest_ip, dest_port):
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            print((dest_ip, dest_port))
-            tcp_sock.connect((dest_ip, dest_port))
+            print(('127.0.0.1', dest_port))
+            tcp_sock.connect(('127.0.0.1', dest_port))
         except Exception as e:
             print("connection failed", e)
         finally:

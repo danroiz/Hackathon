@@ -10,7 +10,7 @@ def run():
     buffer_size = 1024
     magic_cookie = bytearray.fromhex("abcddcba")
     offer_type = bytearray.fromhex("02")
-    tcp_welcome_port = 12345
+    tcp_welcome_port = 1234
     tcp_welcome_port_bytes = tcp_welcome_port.to_bytes(2, endian)
     msg = bytearray()
     msg.extend(magic_cookie)
@@ -27,13 +27,14 @@ def run():
 
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print("my welcome port:", tcp_welcome_port)
-    tcp_sock.bind((hostname, tcp_welcome_port))
+    tcp_sock.bind(('127.0.0.1', tcp_welcome_port))
     tcp_sock.listen(10)
 
     sending_offer = True
     while sending_offer:
         udp_sock.sendto(msg, ("255.255.255.255", offers_port))  # TODO:change to dynamic interface
-        tcp_sock.accept()
+        (client, (ip, port)) = tcp_sock.accept()
+        print("SERVER CONNECTED TO:", client)
         sleep(1)
 
 
