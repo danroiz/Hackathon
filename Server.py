@@ -1,6 +1,7 @@
 import socket
 import sys
 import threading
+import time
 from time import sleep
 
 tcp_welcome_port = 1234
@@ -27,6 +28,17 @@ def send_offers(stop_offer):
 
 
 
+def get_answer(answer_arr, event, client):
+    try:
+        buffer_size = 1024
+        msg = client.recv(buffer_size)
+        answer_arr[0] = msg.decode("utf-8")
+        answer_arr[1] = time.time()
+        event.set()
+    except Exception:
+        return
+
+
 def get_random_question():
     return "How much is 1+1?"
 
@@ -46,8 +58,9 @@ def run():
     tcp_sock.bind((local_ip, tcp_welcome_port))
     tcp_sock.listen()
     to_stop = False
-    t1 = threading.Thread(target=send_offers, args=(lambda: to_stop, ))
+    t1 = threading.Thread(target=send_offers, args=(lambda: to_stop,))
     t1.start()
+
     client_conncted = 0
     clients = [None, None]  # each element is array of length 2 which containing client socket and client name
     while client_conncted < 2:
@@ -67,8 +80,43 @@ def run():
     byte_array = bytearray(encoded_string)
     clients[0][0].send(byte_array)
     clients[1][0].send(byte_array)
-    msg = clients[i][0].recv(buffer_size)
-    print(msg)
+
+    e = threading.Event()
+    # create to threads with e as paramater
+    # false means tie
+    answers = [[None, None], [None, None]]
+    t0 = threading.Thread(target=get_answer, args=(answers[0], e, clients[0][0],))
+    t1 = threading.Thread(target=get_answer, args=(answers[1], e, clients[1][0],))
+    t0.start()
+    t1.start()
+
+    wait_return = e.wait(timeout=10)
+    winner = clients[1][1]
+    if wait_return:
+        if answers[0][0] != None:
+            if answers[1][0] != None:
+                if answers[0][1] < answers[1][1]:
+                    winner = clients[0][1]
+                else:
+                    winner = clients[1][1]
+            else:
+                winner = clients[0][1]
+        reply = f'Game over!\nThe correct answer was 4!\nCongratulations to the winner: {winner}'
+        encoded_string = reply.encode()
+        byte_array = bytearray(encoded_string)
+        clients[0][0].send(byte_array)
+        clients[1][0].send(byte_array)
+    else:
+        reply = f'tie'
+        encoded_string = reply.encode()
+        byte_array = bytearray(encoded_string)
+        clients[0][0].send(byte_array)
+        clients[1][0].send(byte_array)
+
+    print("close 0")
+    clients[0][0].close()
+    print("close 1")
+    clients[1][0].close()
 
 
 class Server:
@@ -77,6 +125,7 @@ class Server:
 
 
 if __name__ == '__main__':
+    game_count = 1
     while True:
         run()
-        print("# done")
+        print(f'finnish game {game_count}')
