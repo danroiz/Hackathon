@@ -1,6 +1,17 @@
 import socket
 import struct
 import sys
+import threading
+
+
+def get_game_result(tcp_sock, event):
+    try:
+        winner_msg = tcp_sock.recv(1024)
+        print(winner_msg.decode("utf-8"))
+    except socket.error:
+        print("Server doesn't respond after sending answer.")
+    finally:
+        event.set()
 
 
 def run():
@@ -18,23 +29,23 @@ def run():
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp_sock.settimeout(15)
         try:
-
             tcp_sock.connect((destination_ip, destination_port))
             tcp_sock.send(team_name)
-            print("BEFORE RECV")
-            msg = tcp_sock.recv(1024)
-            print("AFTER RECV")
-            print(msg.decode("utf-8"))
-            ans = sys.stdin.read(1)
-            tcp_sock.send(bytearray(ans.encode()))
+            question = tcp_sock.recv(1024)
+            print(question.decode("utf-8"))
+            event = threading.Event()
+            t1 = threading.Thread(target=get_game_result, args=(tcp_sock, event,))
+            t1.start()
             try:
-                msg = tcp_sock.recv(1024)
-                print(msg.decode("utf-8"))
+                ans = sys.stdin.read(1)
+                if not event.is_set():
+                    tcp_sock.send(bytearray(ans.encode()))
             except socket.error:
-                print("Server doesn't respond after sending answer.")
+                pass
         except socket.error as e:
             print("Server doesn't respond after connecting.")
         finally:
+            print("Closing")
             tcp_sock.close()
 
     def listen():
@@ -46,18 +57,16 @@ def run():
         recv_magic_cookie = message[0:4]
         for i in range(4):
             if magic_cookie[i] != recv_magic_cookie[i]:
-                # print(message)
                 return
         recv_msg_type = message[4]
         if recv_msg_type != offer_type[0]:
-            # print(message)
             return
         server_port = struct.unpack(endian, message[5:7])[0]
         server_ip = addr[0]
         udp_sock.close()
         connect(server_ip, server_port)
 
-    while 1:
+    while True:
         listen()
 
 
