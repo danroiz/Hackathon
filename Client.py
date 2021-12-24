@@ -1,4 +1,3 @@
-import array
 import socket
 import struct
 import sys
@@ -14,30 +13,32 @@ def run():
     magic_cookie = bytearray.fromhex("abcddcba")
     offer_type = bytearray.fromhex("02")
 
-    print("Client started, listening for offer requests...")
-
-
-
-    def connect(dest_ip, dest_port):
+    def connect(destination_ip, destination_port):
+        print("Received offer from", destination_ip, "\nattempting to connect...")
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_sock.settimeout(15)
         try:
-            tcp_sock.connect(('127.0.0.1', dest_port))
-            print("Client connected successfully via TCP connection")
-            tcp_sock.send(team_name)
-            msg = tcp_sock.recv(1024)
-            print(msg.decode("utf-8"))
-            ans = sys.stdin.read(1) #TODO: not blocking?
-            tcp_sock.send(bytearray(ans.encode()))
-            msg = tcp_sock.recv(1024)
-            print(msg.decode("utf-8"))
 
-        except Exception as e:
-            print("connection failed", e)
+            tcp_sock.connect((destination_ip, destination_port))
+            tcp_sock.send(team_name)
+            print("BEFORE RECV")
+            msg = tcp_sock.recv(1024)
+            print("AFTER RECV")
+            print(msg.decode("utf-8"))
+            ans = sys.stdin.read(1)
+            tcp_sock.send(bytearray(ans.encode()))
+            try:
+                msg = tcp_sock.recv(1024)
+                print(msg.decode("utf-8"))
+            except socket.error:
+                print("Server doesn't respond after sending answer.")
+        except socket.error as e:
+            print("Server doesn't respond after connecting.")
         finally:
-            print("Client closing TCP connection")
             tcp_sock.close()
 
     def listen():
+        print("Client started, listening for offer requests...")
         udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         udp_sock.bind(('', offers_port))
@@ -52,12 +53,11 @@ def run():
             # print(message)
             return
         server_port = struct.unpack(endian, message[5:7])[0]
-        server_ip = addr
+        server_ip = addr[0]
         udp_sock.close()
-        connect(server_ip[0], server_port)
+        connect(server_ip, server_port)
 
     while 1:
-        print("Client listening")
         listen()
 
 
