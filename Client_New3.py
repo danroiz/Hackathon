@@ -74,7 +74,7 @@ class ClientNew:
             tcp_sock.connect((server_ip, server_port))
             tcp_sock.send(self.team_name)
             old_timeout = tcp_sock.gettimeout()
-            tcp_sock.settimeout(25)
+            tcp_sock.settimeout(30)
             question = tcp_sock.recv(1024)
             tcp_sock.settimeout(old_timeout)
             print(question.decode("utf-8"))
