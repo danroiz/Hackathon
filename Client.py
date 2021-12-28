@@ -6,7 +6,8 @@ from scapy.all import *
 
 dev_network = 'eth1'
 test_network = 'eth2'
-local_ip = get_if_addr(dev_network)
+# local_ip = get_if_addr(dev_network)
+local_ip = '127.0.0.1'
 
 def get_game_result(tcp_sock):
     try:
@@ -44,7 +45,8 @@ class ClientNew:
             endian = '<H'
         udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        udp_sock.bind(('', self.OFFERS_PORT))
+        udp_sock.bind((local_ip, self.OFFERS_PORT))
+        
         print("Client started, listening for offer requests...")
         try:
             message, addr = udp_sock.recvfrom(self.BUFFER_SIZE)
@@ -73,7 +75,6 @@ class ClientNew:
             raise Exception("Bad offer type")
 
     def connect(self, server_ip, server_port):
-        # server_ip = "169.254.44.73"  # TODO: erase this
         print("Received offer from", server_ip, "\nattempting to connect...")
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -87,6 +88,7 @@ class ClientNew:
             t1 = threading.Thread(target=get_game_result, args=(tcp_sock,))
             t1.start()
             ans = sys.stdin.readline()
+            ans = ans[0]
             tcp_sock.send(bytearray(ans.encode()))
             t1.join()
         except socket.error as e:
