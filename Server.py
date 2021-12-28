@@ -1,13 +1,19 @@
 import socket
 import sys
 import threading
-from time import sleep, time
+# from time import sleep, time
+import time
+from scapy.all import *
 
+dev_network = 'eth1'
+test_network = 'eth2'
+local_ip = get_if_addr(dev_network)
 
 def send_offers_task(to_stop, tcp_port):
     # UDP SOCKET INIT
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    udp_sock.bind((local_ip, 0))
     offers_port = 13117
     endian = sys.byteorder
     magic_cookie = bytearray.fromhex("abcddcba")
@@ -19,8 +25,8 @@ def send_offers_task(to_stop, tcp_port):
     msg.extend(tcp_welcome_port_bytes)
     while not to_stop():
         print("# Server sending broadcast")
-        udp_sock.sendto(msg, ("255.255.255.255", offers_port))  # TODO:change to dynamic interface
-        sleep(1)
+        udp_sock.sendto(msg, ("255.255.255.255", offers_port))
+        time.sleep(1)
     udp_sock.close()
 
 
@@ -35,7 +41,7 @@ def get_answer_from_player(player_socket, answer_arr, event):
         ans = player_socket.recv(BUFFER_SIZE)
         player_socket.settimeout(old_timeout)
         answer_arr[ANSWER] = ans.decode("utf-8")
-        answer_arr[TIME_ANSWERED] = time()
+        answer_arr[TIME_ANSWERED] = time.time()
         event.set()
     except socket.error as e:
         print("error getting answer from player", e)
@@ -65,8 +71,10 @@ class ServerNew:
 
     def send_offers_state(self):
         # TCP WELCOME SOCKET INIT
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
+        # hostname = socket.gethostname()
+        # local_ip = socket.gethostbyname(hostname)
+        # local_ip = get_if_addr('eth1')
+        # print(local_ip)
         tcp_welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp_welcome_socket.bind((local_ip, self.tcp_welcome_port))
         tcp_welcome_socket.listen()
@@ -90,7 +98,7 @@ class ServerNew:
 
     def start_game(self, players):
         self.set_players_names(players)
-        sleep(self.TEN_SECOND)
+        time.sleep(self.TEN_SECOND)
         self.send_question(players)
         self.decide_winner(players)
 

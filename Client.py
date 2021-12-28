@@ -2,6 +2,11 @@ import struct
 import sys
 import socket
 import threading
+from scapy.all import *
+
+dev_network = 'eth1'
+test_network = 'eth2'
+local_ip = get_if_addr(dev_network)
 
 def get_game_result(tcp_sock):
     try:
@@ -43,12 +48,13 @@ class ClientNew:
         print("Client started, listening for offer requests...")
         try:
             message, addr = udp_sock.recvfrom(self.BUFFER_SIZE)
+            print("got message", message)
         except socket.error as error:
             udp_sock.close()
             print("error getting offer from udp socket")
             raise error
         self.verify_msg(message, udp_sock)
-        server_port = struct.unpack(endian, message[5:7])[0]
+        server_port = struct.unpack(endian, message[5:7])[0] #*********************
         server_ip = addr[0]
         udp_sock.close()
         return server_ip, server_port
@@ -67,7 +73,7 @@ class ClientNew:
             raise Exception("Bad offer type")
 
     def connect(self, server_ip, server_port):
-        server_ip = "169.254.44.73"  # TODO: erase this
+        # server_ip = "169.254.44.73"  # TODO: erase this
         print("Received offer from", server_ip, "\nattempting to connect...")
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
