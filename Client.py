@@ -6,8 +6,10 @@ from scapy.all import *
 
 dev_network = 'eth1'
 test_network = 'eth2'
-# local_ip = get_if_addr(dev_network)
-local_ip = '127.0.0.1'
+local_ip = get_if_addr(dev_network)
+
+
+# local_ip = '127.0.0.1'
 
 def get_game_result(tcp_sock):
     try:
@@ -15,7 +17,7 @@ def get_game_result(tcp_sock):
         tcp_sock.settimeout(20)
         winner_msg = tcp_sock.recv(1024)
         tcp_sock.settimeout(old_timeout)
-        print(winner_msg.decode("utf-8"))
+        print('\033[94m', winner_msg.decode("utf-8"), '\033[0m')
     except socket.error as e:
         print(e)
         print("Server doesn't respond after sending answer.")
@@ -45,8 +47,8 @@ class ClientNew:
             endian = '<H'
         udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        udp_sock.bind((local_ip, self.OFFERS_PORT))
-        
+        udp_sock.bind(('', self.OFFERS_PORT))
+
         print("Client started, listening for offer requests...")
         try:
             message, addr = udp_sock.recvfrom(self.BUFFER_SIZE)
@@ -56,7 +58,8 @@ class ClientNew:
             print("error getting offer from udp socket")
             raise error
         self.verify_msg(message, udp_sock)
-        server_port = struct.unpack(endian, message[5:7])[0] #*********************
+        # server_port = struct.unpack('>H', message[5:7])[0] #*********************
+        server_port = struct.unpack(endian, message[5:7])[0]  # *********************
         server_ip = addr[0]
         udp_sock.close()
         return server_ip, server_port
@@ -75,7 +78,7 @@ class ClientNew:
             raise Exception("Bad offer type")
 
     def connect(self, server_ip, server_port):
-        print("Received offer from", server_ip, "\nattempting to connect...")
+        print(f"\033[92mReceived offer from {server_ip}\nattempting to connect...\033[0m")
         tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             tcp_sock.connect((server_ip, server_port))
@@ -84,7 +87,7 @@ class ClientNew:
             tcp_sock.settimeout(30)
             question = tcp_sock.recv(1024)
             tcp_sock.settimeout(old_timeout)
-            print(question.decode("utf-8"))
+            print('\033[96m', question.decode("utf-8"), '\033[0m')
             t1 = threading.Thread(target=get_game_result, args=(tcp_sock,))
             t1.start()
             ans = sys.stdin.readline()

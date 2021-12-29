@@ -9,8 +9,10 @@ DEV_NETWORK = 'eth1'
 TEST_NETWORK = 'eth2'
 BROADCAST_IP = '255.255.255.255'
 DECODE_FORMAT = "utf-8"
-# local_ip = get_if_addr(DEV_NETWORK)
-local_ip = '127.0.0.1'
+local_ip = get_if_addr(DEV_NETWORK)
+
+
+# local_ip = '127.0.0.1'
 
 def send_offers_task(to_stop, tcp_port):
     # UDP SOCKET INIT
@@ -66,7 +68,7 @@ class ServerNew:
         pass
 
     def start_server(self):
-        
+
         while True:
             try:
                 players, tcp_welcome_socket = self.send_offers_state()
@@ -74,13 +76,17 @@ class ServerNew:
                 self.end_game(players)
             except socket.error as error:
                 print("end", error)
-            finally: 
+            finally:
                 tcp_welcome_socket.close()
 
     def send_offers_state(self):
         # TCP WELCOME SOCKET INIT
         tcp_welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_welcome_socket.bind((local_ip, self.tcp_welcome_port))
+        try:
+            tcp_welcome_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            tcp_welcome_socket.bind((local_ip, self.tcp_welcome_port))
+        except socket.error as error:
+            print("fail binding: ", error)
         tcp_welcome_socket.listen()
         stop_sending_offers = False
         print("Server started, listening on IP address", local_ip)
@@ -153,7 +159,6 @@ class ServerNew:
         b = answer * a
         return f'How much is {b}/{a}?', answer
 
-
     def send_msg_to_players(self, players, msg):
         encoded_string = msg.encode()
         byte_array = bytearray(encoded_string)
@@ -172,9 +177,13 @@ class ServerNew:
         event = threading.Event()
         answers = [[None, None], [None, None]]
         player1_get_ans_thread = threading.Thread(target=get_answer_from_player,
-                                                  args=(players[self.FIRST_PLAYER][self.SOCKET], answers[self.FIRST_PLAYER], event,))
+                                                  args=(
+                                                  players[self.FIRST_PLAYER][self.SOCKET], answers[self.FIRST_PLAYER],
+                                                  event,))
         player2_get_ans_thread = threading.Thread(target=get_answer_from_player,
-                                                  args=(players[self.SECOND_PLAYER][self.SOCKET], answers[self.SECOND_PLAYER], event,))
+                                                  args=(
+                                                  players[self.SECOND_PLAYER][self.SOCKET], answers[self.SECOND_PLAYER],
+                                                  event,))
         player1_get_ans_thread.start()
         player2_get_ans_thread.start()
         is_got_answer = event.wait(timeout=self.TEN_SECOND)  # if return false means tie
@@ -190,7 +199,7 @@ class ServerNew:
         except socket.error as error:
             print("error trying closing tcp sockets")
             print(error)
-    
+
     def announce_winner(self, players, answers, real_answer):
         real_answer = str(real_answer)
         if answers[self.FIRST_PLAYER][self.ANSWER] is not None:
