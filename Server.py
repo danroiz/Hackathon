@@ -1,44 +1,35 @@
 import socket
+import struct
 import sys
 import threading
-# from time import sleep, time
 import time
-from scapy.all import *
+import random
 
-DEV_NETWORK = 'eth1'
-TEST_NETWORK = 'eth2'
-BROADCAST_IP = '127.1.255.255'
+dev_network = '172.01.255.255'
+test_network = '172.99.255.255'
+local_host = '127.0.0.1'
+network_interface = local_host
 DECODE_FORMAT = "utf-8"
-local_ip = get_if_addr(TEST_NETWORK)
 
-
-# local_ip = '127.0.0.1'
-
+# threads task to send broadcast offers every one second
 def send_offers_task(to_stop, tcp_port):
     # UDP SOCKET INIT
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    # print("my local ip", local_ip)
-    udp_sock.bind((local_ip, 0))
+    udp_sock.bind((network_interface, 0))
     offers_port = 13117
     endian = sys.byteorder
-    magic_cookie = bytearray.fromhex("abcddcba")
-    # magic_cookie = bytearray.fromhex("badccdab")
-    offer_type = bytearray.fromhex("02")
-    tcp_welcome_port_bytes = tcp_port.to_bytes(2, endian)
-    msg = bytearray()
-    msg.extend(magic_cookie)
-    msg.extend(offer_type)
-    msg.extend(tcp_welcome_port_bytes)
-    msg = struct.pack("IbH", 0xabcddcba, 0x2, tcp_port)
+    magic_cookie = 0xabcddcba
+    offer_type = 0x2
+    msg = struct.pack("IbH", magic_cookie, offer_type, tcp_port)
     while not to_stop():
         print("# Server sending broadcast")
-        print(tcp_port)
-        udp_sock.sendto(msg, ('172.99.255.255', offers_port))
+        udp_sock.sendto(msg, (network_interface, offers_port))
         time.sleep(1)
     udp_sock.close()
 
 
+# a thread task to get answer from client. will notify main thread when this happens 
 def get_answer_from_player(player_socket, answer_arr, event):
     ANSWER = 0
     TIME_ANSWERED = 1
@@ -86,16 +77,11 @@ class ServerNew:
     def send_offers_state(self):
         # TCP WELCOME SOCKET INIT
         tcp_welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            # tcp_welcome_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-            tcp_welcome_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            tcp_welcome_socket.bind((local_ip, self.tcp_welcome_port))
-        except socket.error as error:
-            print("fail binding: ", error)
-            raise error
+        tcp_welcome_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tcp_welcome_socket.bind((network_interface, self.tcp_welcome_port))
         tcp_welcome_socket.listen()
         stop_sending_offers = False
-        print("Server started, listening on IP address", local_ip)
+        print("Server started, listening on IP address", network_interface)
         # sending offers until 2 clients connected
         send_offers_thread = \
             threading.Thread(target=send_offers_task, args=(lambda: stop_sending_offers, self.tcp_welcome_port,))
@@ -109,7 +95,6 @@ class ServerNew:
             players[client_connected_counter] = [client_socket, "Anonymous Player\n"]
             client_connected_counter = client_connected_counter + 1
             print("Player number", client_connected_counter, "has connected")
-        # tcp_welcome_socket.close()  # won't welcome more than 2 clients at a time
         stop_sending_offers = True  # stops the send_offers_thread thread from sending more offers
         return players, tcp_welcome_socket
 
@@ -120,6 +105,7 @@ class ServerNew:
         self.send_question(players, question)
         self.decide_winner(players, answer)
 
+    # get the teams name msg
     def set_players_names(self, players):
         for i in range(len(players)):
             try:
@@ -178,7 +164,8 @@ class ServerNew:
         except socket.error as error:
             players[self.SECOND_PLAYER][self.SOCKET].close()
             print("error sending question to player 2", error)
-
+    
+    # if got ans within 10 sec, there is a winner, else announce
     def decide_winner(self, players, real_answer):
         event = threading.Event()
         answers = [[None, None], [None, None]]
@@ -206,6 +193,7 @@ class ServerNew:
             print("error trying closing tcp sockets")
             print(error)
 
+    # check who answered first, and if his answer his correct
     def announce_winner(self, players, answers, real_answer):
         real_answer = str(real_answer)
         if answers[self.FIRST_PLAYER][self.ANSWER] is not None:
