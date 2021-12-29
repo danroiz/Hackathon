@@ -87,6 +87,7 @@ class ServerNew:
             tcp_welcome_socket.bind((local_ip, self.tcp_welcome_port))
         except socket.error as error:
             print("fail binding: ", error)
+            raise error
         tcp_welcome_socket.listen()
         stop_sending_offers = False
         print("Server started, listening on IP address", local_ip)
